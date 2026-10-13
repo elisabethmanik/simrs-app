@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Pasien;
 use App\Models\Pendaftaran;
 use App\Models\RekamMedis;
@@ -11,30 +10,39 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // Redirect otomatis jika yang login adalah Dokter
-        if (auth()->user()->role === 'dokter') {
+        $user = auth()->user();
+
+        if ($user->role === 'dokter') {
             return redirect()->route('dokter.dashboard');
         }
 
-        // Variabel statistik untuk Dashboard Admin
+        if (in_array($user->role, ['apoteker', 'farmasi'], true)) {
+            return redirect()->route('apotek.index');
+        }
+
+        abort_unless($user->role === 'admin', 403, 'Anda tidak memiliki akses ke dashboard admin.');
+
         $totalPasien = Pasien::count();
+
         $menungguPemeriksaan = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
             ->where('status', 'menunggu')
             ->count();
-        $menungguApotek = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
+
+        $menungguObat = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
             ->whereIn('status', ['menunggu_apotek', 'menunggu_obat'])
             ->count();
-        $pelayananSelesai = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
+
+        $layananSelesai = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
             ->where('status', 'selesai')
             ->count();
 
-        $antreanHariIni = Pendaftaran::with(['pasien', 'dokter'])
+        $antreanTerbaru = Pendaftaran::with(['pasien', 'dokter'])
             ->whereDate('tanggal_daftar', now()->toDateString())
             ->latest()
             ->take(5)
             ->get();
 
-        $pemeriksaanTerbaru = RekamMedis::with('pasien')
+        $rekamMedisTerbaru = RekamMedis::with('pasien')
             ->latest()
             ->take(5)
             ->get();
@@ -42,10 +50,10 @@ class DashboardController extends Controller
         return view('dashboard', compact(
             'totalPasien',
             'menungguPemeriksaan',
-            'menungguApotek',
-            'pelayananSelesai',
-            'antreanHariIni',
-            'pemeriksaanTerbaru'
+            'menungguObat',
+            'layananSelesai',
+            'antreanTerbaru',
+            'rekamMedisTerbaru'
         ));
     }
 }

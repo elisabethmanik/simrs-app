@@ -92,7 +92,7 @@
                                                 <span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Menunggu</span>
                                             @elseif($item->status == 'diperiksa')
                                                 <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Diperiksa</span>
-                                            @elseif($item->status == 'menunggu_obat')
+                                            @elseif(in_array($item->status, ['menunggu_apotek', 'menunggu_obat']))
                                                 <span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Apotek</span>
                                             @else
                                                 <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded">Selesai</span>

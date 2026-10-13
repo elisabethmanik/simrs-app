@@ -14,8 +14,8 @@
                     <h1 class="text-2xl font-bold">Selamat Datang, dr. {{ Auth::user()->name }}! 👋</h1>
                     <p class="text-blue-100 text-sm mt-1">Poli Tugas: <span class="font-semibold uppercase">{{ Auth::user()->poli ?? 'Poli Umum' }}</span></p>
                 </div>
-                <a href="{{ route('rekam-medis.index') }}" class="bg-white text-blue-600 font-bold px-4 py-2.5 rounded-lg shadow hover:bg-blue-50 transition text-sm">
-                    Mulai Pemeriksaan →
+                <a href="{{ route('pendaftarans.index') }}" class="bg-white text-blue-600 font-bold px-4 py-2.5 rounded-lg shadow hover:bg-blue-50 transition text-sm">
+                    Lihat Antrean →
                 </a>
             </div>
 
@@ -39,7 +39,7 @@
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-bold text-gray-800">Antrean Pasien Menunggu Hari Ini</h3>
-                    <a href="{{ route('rekam-medis.index') }}" class="text-blue-600 text-sm font-semibold hover:underline">Lihat Semua Pasien →</a>
+                    <a href="{{ route('pendaftarans.index') }}" class="text-blue-600 text-sm font-semibold hover:underline">Buka Antrean →</a>
                 </div>
 
                 <div class="overflow-x-auto">

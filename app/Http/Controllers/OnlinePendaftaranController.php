@@ -2,317 +2,371 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Pasien;
 use App\Models\Pendaftaran;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class OnlinePendaftaranController extends Controller
 {
-    /**
-     * Halaman Utama Form Pendaftaran Online Pasien
-     */
     public function index()
     {
-        return view('pendaftaran-online.index');
+        $polis = User::where('role', 'dokter')
+            ->whereNotNull('poli')
+            ->where('poli', '!=', '')
+            ->select('poli')
+            ->distinct()
+            ->orderBy('poli')
+            ->pluck('poli');
+
+        return view('pendaftaran-online.index', compact('polis'));
     }
 
-    /**
-     * API Cek Data Pasien Lama & Riwayat Berobat via NIK / No. RM (AJAX)
-     */
     public function checkPasien(Request $request)
     {
         $request->validate([
-            'keyword' => 'required|string',
+            'keyword' => ['required', 'string', 'max:100'],
         ]);
 
-        $keyword = trim($request->keyword);
+        $keyword = trim((string) $request->keyword);
+        $normalizedRm = preg_replace('/[^A-Za-z0-9]/', '', $keyword);
 
-        $pasien = Pasien::where('no_rm', $keyword)
-            ->orWhere('nik', $keyword)
-            ->first();
+        $pasien = Pasien::where(function ($query) use ($keyword, $normalizedRm) {
+            $query->where('nik', $keyword)
+                ->orWhere('no_rm', $keyword);
+
+            if ($normalizedRm !== '') {
+                $query->orWhereRaw("REPLACE(REPLACE(no_rm, '-', ''), ' ', '') = ?", [$normalizedRm]);
+            }
+        })->first();
 
         if (!$pasien) {
             return response()->json([
                 'success' => false,
-                'message' => 'Data pasien tidak ditemukan.'
+                'message' => 'Data pasien tidak ditemukan. Periksa kembali NIK atau No. RM.',
             ], 404);
         }
 
         $riwayats = Pendaftaran::with('dokter')
             ->where('pasien_id', $pasien->id)
-            ->orderBy('tanggal_daftar', 'desc')
+            ->orderByDesc('tanggal_daftar')
             ->take(5)
             ->get();
 
         return response()->json([
             'success' => true,
-            'pasien'  => $pasien,
-            'riwayat' => $riwayats
-        ], 200);
+            'pasien' => $pasien,
+            'riwayat' => $riwayats,
+        ]);
     }
 
-    /**
-     * API Cek Status Antrean / Booking via No. RM atau NIK
-     */
     public function checkStatus($keyword)
     {
         try {
             $keyword = trim(urldecode($keyword));
+            $normalizedRm = preg_replace('/[^A-Za-z0-9]/', '', $keyword);
 
-            if (empty($keyword)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Masukkan No. RM atau NIK terlebih dahulu.'
-                ], 200);
-            }
-
-            // 1. Cari data pasien berdasarkan NIK atau No. RM
-            $pasien = Pasien::where('nik', $keyword)
-                ->orWhere('no_rm', $keyword)
-                ->first();
+            $pasien = Pasien::where(function ($query) use ($keyword, $normalizedRm) {
+                $query->where('nik', $keyword)->orWhere('no_rm', $keyword);
+                if ($normalizedRm !== '') {
+                    $query->orWhereRaw("REPLACE(REPLACE(no_rm, '-', ''), ' ', '') = ?", [$normalizedRm]);
+                }
+            })->first();
 
             if (!$pasien) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Data pasien dengan NIK / No. RM tersebut tidak ditemukan.'
-                ], 200);
+                return response()->json(['success' => false, 'message' => 'Data pasien tidak ditemukan.'], 200);
             }
 
-            // 2. Cari pendaftaran antrean paling baru milik pasien
             $pendaftaran = Pendaftaran::with(['pasien', 'dokter'])
                 ->where('pasien_id', $pasien->id)
                 ->latest()
                 ->first();
 
             if (!$pendaftaran) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Pasien ini belum memiliki pendaftaran / antrean aktif.'
-                ], 200);
+                return response()->json(['success' => false, 'message' => 'Pasien belum memiliki pendaftaran.'], 200);
             }
 
-            // Format otomatis kode booking menggunakan tanggal & nomor antrean
-            $kodeBookingFormat = 'REG-' . date('Ymd', strtotime($pendaftaran->tanggal_daftar)) . '-' . sprintf('%03d', $pendaftaran->no_antrean);
+            $kodeBookingFormat = 'REG-' . date('Ymd', strtotime($pendaftaran->tanggal_daftar)) . '-' . preg_replace('/\D/', '', (string) $pendaftaran->no_antrean);
 
             return response()->json([
                 'success' => true,
-                'data'    => [
-                    'kode_booking'  => $pendaftaran->kode_booking ?? $kodeBookingFormat,
+                'data' => [
+                    'kode_booking' => $pendaftaran->kode_booking ?? $kodeBookingFormat,
                     'nomor_antrean' => $pendaftaran->no_antrean,
-                    'nama_pasien'   => $pendaftaran->pasien ? $pendaftaran->pasien->nama : '-',
-                    'poli'          => $pendaftaran->poli,
-                    'tanggal_daftar'=> Carbon::parse($pendaftaran->tanggal_daftar)->translatedFormat('d F Y'),
-                    'status'        => $pendaftaran->status,
-                    'nama_dokter'   => $pendaftaran->dokter ? $pendaftaran->dokter->name : 'Akan ditentukan saat panggilan',
-                ]
-            ], 200);
-
+                    'nama_pasien' => $pendaftaran->pasien->nama ?? '-',
+                    'poli' => $pendaftaran->poli,
+                    'tanggal_daftar' => Carbon::parse($pendaftaran->tanggal_daftar)->translatedFormat('d F Y'),
+                    'jam_daftar' => $pendaftaran->jam_daftar ? substr((string) $pendaftaran->jam_daftar, 0, 5) : '-',
+                    'status' => $pendaftaran->status,
+                    'nama_dokter' => $pendaftaran->dokter->name ?? '-',
+                ],
+            ]);
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
-            ], 200);
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan sistem.'], 200);
         }
     }
 
-    /**
-     * API Estimasi Jam Panggilan Real-Time (Dinamis WIB)
-     */
     public function getDokterByPoli(Request $request, $poli)
     {
-        try {
-            $poliName = trim(urldecode($poli));
-            $tanggal = $request->get('tanggal', date('Y-m-d'));
+        $request->validate([
+            'tanggal' => ['required', 'date', 'after_or_equal:today'],
+        ], [
+            'tanggal.required' => 'Pilih tanggal kunjungan terlebih dahulu.',
+            'tanggal.after_or_equal' => 'Tanggal kunjungan tidak boleh sebelum hari ini.',
+        ]);
 
-            $totalAntrean = Pendaftaran::where('poli', $poliName)
-                ->whereDate('tanggal_daftar', $tanggal)
-                ->count();
+        $poliName = trim(urldecode($poli));
+        $tanggal = Carbon::parse($request->tanggal, 'Asia/Jakarta');
+        $hari = $this->hariIndonesia($tanggal);
 
-            $noAntreanSelanjutnya = $totalAntrean + 1;
+        $dokters = User::where('role', 'dokter')
+            ->where('poli', $poliName)
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $dokter) use ($tanggal, $hari) {
+                $hariPraktik = $this->parseHariPraktik($dokter->hari_praktik);
+                $tersediaHari = in_array($hari, $hariPraktik, true);
+                $slots = $tersediaHari ? $this->buildSlots($dokter, $tanggal) : [];
 
-            $now = Carbon::now('Asia/Jakarta');
-            $jamBukaDefault = Carbon::parse($tanggal . ' 08:00:00', 'Asia/Jakarta');
+                return [
+                    'id' => $dokter->id,
+                    'name' => $dokter->name,
+                    'poli' => $dokter->poli,
+                    'hari_praktik' => $hariPraktik,
+                    'jam_mulai' => $dokter->jam_mulai ? substr((string) $dokter->jam_mulai, 0, 5) : '08:00',
+                    'jam_selesai' => $dokter->jam_selesai ? substr((string) $dokter->jam_selesai, 0, 5) : '16:00',
+                    'tersedia' => $tersediaHari && count($slots) > 0,
+                    'slots' => $slots,
+                    'keterangan' => !$tersediaHari
+                        ? "Tidak praktik hari {$hari}"
+                        : (count($slots) === 0 ? 'Tidak ada jam yang masih tersedia hari ini' : 'Tersedia'),
+                ];
+            });
 
-            if ($tanggal == $now->format('Y-m-d') && $now->gt($jamBukaDefault)) {
-                $baseTime = $now->copy()->addMinutes(15);
-                $estimasiMenit = ($noAntreanSelanjutnya - 1) * 15;
-                $estimasiJam = $baseTime->addMinutes($estimasiMenit)->format('H:i');
-            } else {
-                $estimasiMenit = ($noAntreanSelanjutnya - 1) * 15;
-                $estimasiJam = $jamBukaDefault->addMinutes($estimasiMenit)->format('H:i');
-            }
-
-            return response()->json([
-                'success'      => true,
-                'no_antrean'   => $noAntreanSelanjutnya,
-                'estimasi_jam' => $estimasiJam,
-                'message'      => "Antrean Ke-{$noAntreanSelanjutnya} (Estimasi Dipanggil Jam: {$estimasiJam} WIB)"
-            ], 200);
-
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false, 
-                'error'   => $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'hari' => $hari,
+            'dokters' => $dokters,
+        ]);
     }
 
-    /**
-     * Proses Simpan Pendaftaran Online Pasien (Auto-Increment Antrean Presisi)
-     */
     public function store(Request $request)
     {
-        if ($request->is_pasien_baru == '1') {
-            $request->validate([
-                'nama'          => 'required|string|max:255',
-                'nik'           => 'required|numeric|digits:16|unique:pasiens,nik',
-                'jenis_kelamin' => 'required|in:L,P',
-                'tanggal_lahir' => 'required|date',
-                'no_hp'         => 'required|numeric|digits_between:10,13',
-                'alamat'        => 'required|string',
+        $isPasienBaru = (string) $request->input('is_pasien_baru', '1') === '1';
+
+        if ($isPasienBaru) {
+            $validatedPasien = $request->validate([
+                'nama' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[\pL\s\.\'\-]+$/u'],
+                'nik' => ['required', 'digits:16', 'unique:pasiens,nik'],
+                'jenis_kelamin' => ['required', Rule::in(['L', 'P'])],
+                'tanggal_lahir' => ['required', 'date', 'before_or_equal:today'],
+                'no_hp' => ['required', 'regex:/^[0-9]{10,13}$/'],
+                'alamat' => ['required', 'string', 'min:5', 'max:1000'],
             ], [
-                'nik.unique'           => 'NIK ini sudah terdaftar sebagai pasien lama. Silakan gunakan tab Pasien Lama.',
-                'nik.digits'           => 'NIK harus berisi tepat 16 digit angka.',
-                'no_hp.digits_between' => 'Nomor HP/WA harus berkisar antara 10 sampai 13 digit angka.'
+                'nama.regex' => 'Nama hanya boleh berisi huruf, spasi, titik, apostrof, atau tanda hubung.',
+                'nik.digits' => 'NIK harus tepat 16 digit angka.',
+                'nik.unique' => 'NIK sudah terdaftar. Gunakan pilihan Pasien Lama.',
+                'tanggal_lahir.before_or_equal' => 'Tanggal lahir tidak boleh melebihi hari ini.',
+                'no_hp.regex' => 'Nomor HP harus 10 sampai 13 digit angka.',
             ]);
         } else {
             $request->validate([
-                'pasien_id' => 'required|exists:pasiens,id'
+                'pasien_id' => ['required', 'exists:pasiens,id'],
             ], [
-                'pasien_id.required' => 'Gagal! Anda belum melakukan pencarian NIK / No. RM yang valid.'
+                'pasien_id.required' => 'Cari dan pilih data pasien lama terlebih dahulu.',
             ]);
         }
 
-        $request->validate([
-            'poli'           => 'required|string',
-            'tanggal_daftar' => 'required|date|after_or_equal:today',
-            'keluhan'        => 'nullable|string|max:500',
+        $validatedBooking = $request->validate([
+            'poli' => ['required', 'string', Rule::exists('users', 'poli')->where(fn ($query) => $query->where('role', 'dokter'))],
+            'dokter_id' => ['required', 'integer', 'exists:users,id'],
+            'tanggal_daftar' => ['required', 'date', 'after_or_equal:today'],
+            'jam_daftar' => ['required', 'date_format:H:i'],
+        ], [
+            'poli.required' => 'Poliklinik wajib dipilih.',
+            'dokter_id.required' => 'Dokter wajib dipilih.',
+            'tanggal_daftar.required' => 'Tanggal kunjungan wajib dipilih.',
+            'tanggal_daftar.after_or_equal' => 'Tanggal kunjungan tidak boleh sebelum hari ini.',
+            'jam_daftar.required' => 'Jam kunjungan wajib dipilih.',
+            'jam_daftar.date_format' => 'Format jam kunjungan tidak valid.',
         ]);
 
+        $dokter = User::where('id', $validatedBooking['dokter_id'])
+            ->where('role', 'dokter')
+            ->firstOrFail();
+
+        if ($dokter->poli !== $validatedBooking['poli']) {
+            return back()->withErrors([
+                'dokter_id' => 'Dokter yang dipilih tidak sesuai dengan poliklinik.',
+            ])->withInput();
+        }
+
+        $tanggal = Carbon::parse($validatedBooking['tanggal_daftar'], 'Asia/Jakarta');
+        $hari = $this->hariIndonesia($tanggal);
+        $hariPraktik = $this->parseHariPraktik($dokter->hari_praktik);
+
+        if (!in_array($hari, $hariPraktik, true)) {
+            return back()->withErrors([
+                'tanggal_daftar' => "{$dokter->name} tidak praktik pada hari {$hari}.",
+            ])->withInput();
+        }
+
+        $jamMulai = $dokter->jam_mulai ? substr((string) $dokter->jam_mulai, 0, 5) : '08:00';
+        $jamSelesai = $dokter->jam_selesai ? substr((string) $dokter->jam_selesai, 0, 5) : '16:00';
+        $jamPilihan = Carbon::createFromFormat('Y-m-d H:i', $tanggal->format('Y-m-d') . ' ' . $validatedBooking['jam_daftar'], 'Asia/Jakarta');
+        $mulai = Carbon::createFromFormat('Y-m-d H:i', $tanggal->format('Y-m-d') . ' ' . $jamMulai, 'Asia/Jakarta');
+        $selesai = Carbon::createFromFormat('Y-m-d H:i', $tanggal->format('Y-m-d') . ' ' . $jamSelesai, 'Asia/Jakarta');
+
+        if ($jamPilihan->lt($mulai) || !$jamPilihan->lt($selesai)) {
+            return back()->withErrors([
+                'jam_daftar' => "Jam kunjungan harus berada pada jam praktik {$jamMulai} - {$jamSelesai} WIB.",
+            ])->withInput();
+        }
+
+        if ($tanggal->isToday() && $jamPilihan->lte(Carbon::now('Asia/Jakarta'))) {
+            return back()->withErrors([
+                'jam_daftar' => 'Jam kunjungan untuk hari ini harus lebih besar dari waktu sekarang.',
+            ])->withInput();
+        }
+
         try {
-            $pendaftaran = DB::transaction(function () use ($request) {
-                if ($request->is_pasien_baru == '1') {
-                    $today = date('Ymd');
-                    $lastPasien = Pasien::whereDate('created_at', now()->toDateString())->latest()->first();
-                    $nextNumber = $lastPasien ? sprintf('%03d', ((int) substr($lastPasien->no_rm, -3)) + 1) : '001';
-                    $no_rm = "RM-{$today}-{$nextNumber}";
+            $pendaftaran = DB::transaction(function () use ($request, $isPasienBaru, $validatedBooking, $dokter) {
+                if ($isPasienBaru) {
+                    $today = now('Asia/Jakarta')->format('Ymd');
+                    $lastPasien = Pasien::whereDate('created_at', now('Asia/Jakarta')->toDateString())->latest()->first();
+                    $lastNumber = $lastPasien ? (int) substr((string) $lastPasien->no_rm, -3) : 0;
+                    $noRm = 'RM-' . $today . '-' . str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
 
                     $pasien = Pasien::create([
-                        'no_rm'         => $no_rm,
-                        'nama'          => trim($request->nama),
-                        'nik'           => trim($request->nik),
+                        'no_rm' => $noRm,
+                        'nama' => trim((string) $request->nama),
+                        'nik' => trim((string) $request->nik),
                         'jenis_kelamin' => $request->jenis_kelamin,
                         'tanggal_lahir' => $request->tanggal_lahir,
-                        'no_hp'         => trim($request->no_hp),
-                        'alamat'        => trim($request->alamat),
+                        'no_hp' => trim((string) $request->no_hp),
+                        'alamat' => trim((string) $request->alamat),
                     ]);
 
-                    $pasien_id = $pasien->id;
+                    $pasienId = $pasien->id;
                 } else {
-                    $pasien_id = $request->pasien_id;
+                    $pasienId = (int) $request->pasien_id;
                 }
 
-                $cleanPoli = trim(str_ireplace('poli', '', strtolower($request->poli)));
+                $duplikat = Pendaftaran::where('pasien_id', $pasienId)
+                    ->whereDate('tanggal_daftar', $validatedBooking['tanggal_daftar'])
+                    ->whereIn('status', ['menunggu', 'diperiksa', 'menunggu_apotek', 'menunggu_obat'])
+                    ->exists();
 
-                $dokters = User::where('role', 'LIKE', '%dokter%')
-                    ->where('poli', 'LIKE', '%' . $cleanPoli . '%')
-                    ->get();
-
-                if ($dokters->isEmpty()) {
-                    $dokters = User::where('role', 'LIKE', '%dokter%')->get();
+                if ($duplikat) {
+                    throw new Exception('Pasien masih memiliki pendaftaran aktif pada tanggal tersebut.');
                 }
 
-                if ($dokters->isEmpty()) {
-                    throw new Exception('Mohon maaf, belum ada akun Dokter yang terdaftar di sistem.');
-                }
-
-                $selectedDokter = $dokters->sortBy(function ($dokter) use ($request) {
-                    return Pendaftaran::where('dokter_id', $dokter->id)
-                        ->whereDate('tanggal_daftar', $request->tanggal_daftar)
-                        ->whereIn('status', ['menunggu', 'diperiksa'])
-                        ->count();
-                })->first();
-
-                $lastAntrean = Pendaftaran::whereDate('tanggal_daftar', $request->tanggal_daftar)
-                    ->where('poli', $request->poli)
-                    ->max('no_antrean');
-
-                $noAntrean = $lastAntrean ? $lastAntrean + 1 : 1;
+                $lastNumber = Pendaftaran::whereDate('tanggal_daftar', $validatedBooking['tanggal_daftar'])
+                    ->where('poli', $validatedBooking['poli'])
+                    ->get()
+                    ->map(fn ($item) => (int) preg_replace('/\D/', '', (string) $item->no_antrean))
+                    ->max() ?? 0;
 
                 return Pendaftaran::create([
-                    'pasien_id'      => $pasien_id,
-                    'poli'           => $request->poli,
-                    'dokter_id'      => $selectedDokter->id,
-                    'tanggal_daftar' => $request->tanggal_daftar,
-                    'no_antrean'     => $noAntrean,
-                    'keluhan'        => $request->keluhan,
-                    'status'         => 'menunggu',
+                    'pasien_id' => $pasienId,
+                    'poli' => $validatedBooking['poli'],
+                    'dokter_id' => $dokter->id,
+                    'tanggal_daftar' => $validatedBooking['tanggal_daftar'],
+                    'jam_daftar' => $validatedBooking['jam_daftar'] . ':00',
+                    'no_antrean' => 'A-' . str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT),
+                    'status' => 'menunggu',
                 ]);
             });
 
             return redirect()->route('pendaftaran-online.sukses', $pendaftaran->id)
-                ->with('success', 'Pendaftaran online berhasil dibuat!');
-
+                ->with('success', 'Pendaftaran online berhasil dibuat.');
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage())->withInput();
         }
     }
 
-    /**
-     * Halaman Struk Bukti Pendaftaran
-     */
     public function sukses($id)
     {
         $pendaftaran = Pendaftaran::with(['pasien', 'dokter'])->findOrFail($id);
-        
-        $now = Carbon::now('Asia/Jakarta');
-        $tglDaftarStr = Carbon::parse($pendaftaran->tanggal_daftar)->format('Y-m-d');
-        $jamBukaDefault = Carbon::parse($tglDaftarStr . ' 08:00:00', 'Asia/Jakarta');
-        $isToday = Carbon::parse($pendaftaran->tanggal_daftar)->isToday();
-
-        if ($isToday && $now->gt($jamBukaDefault)) {
-            $baseTime = $now->copy()->addMinutes(15);
-            $estimasiMenit = ($pendaftaran->no_antrean - 1) * 15;
-            $estimasiJam = $baseTime->addMinutes($estimasiMenit)->format('H:i');
-        } else {
-            $estimasiMenit = ($pendaftaran->no_antrean - 1) * 15;
-            $estimasiJam = $jamBukaDefault->addMinutes($estimasiMenit)->format('H:i');
-        }
+        $estimasiJam = $pendaftaran->jam_daftar
+            ? substr((string) $pendaftaran->jam_daftar, 0, 5)
+            : '08:00';
 
         return view('pendaftaran-online.sukses', compact('pendaftaran', 'estimasiJam'));
     }
 
-    /**
-     * Redirect ke Tiket Antrean Terakhir Pasien
-     */
     public function lihatTiket(Request $request)
     {
-        $request->validate([
-            'keyword' => 'required|string',
-        ]);
+        $request->validate(['keyword' => ['required', 'string']]);
 
-        $keyword = trim($request->keyword);
+        $keyword = trim((string) $request->keyword);
+        $normalizedRm = preg_replace('/[^A-Za-z0-9]/', '', $keyword);
 
-        $pasien = Pasien::where('no_rm', $keyword)
-            ->orWhere('nik', $keyword)
-            ->first();
+        $pasien = Pasien::where(function ($query) use ($keyword, $normalizedRm) {
+            $query->where('nik', $keyword)->orWhere('no_rm', $keyword);
+            if ($normalizedRm !== '') {
+                $query->orWhereRaw("REPLACE(REPLACE(no_rm, '-', ''), ' ', '') = ?", [$normalizedRm]);
+            }
+        })->first();
 
         if (!$pasien) {
             return back()->with('error', 'Data pasien tidak ditemukan.');
         }
 
-        $pendaftaranTerakhir = Pendaftaran::where('pasien_id', $pasien->id)
-            ->latest()
-            ->first();
+        $pendaftaran = Pendaftaran::where('pasien_id', $pasien->id)->latest()->first();
 
-        if (!$pendaftaranTerakhir) {
-            return back()->with('error', 'Pasien ini belum memiliki riwayat pendaftaran.');
+        if (!$pendaftaran) {
+            return back()->with('error', 'Pasien belum memiliki riwayat pendaftaran.');
         }
 
-        return redirect()->route('pendaftaran-online.sukses', $pendaftaranTerakhir->id);
+        return redirect()->route('pendaftaran-online.sukses', $pendaftaran->id);
+    }
+
+    private function parseHariPraktik(?string $value): array
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $value))));
+    }
+
+    private function hariIndonesia(Carbon $date): string
+    {
+        return match ($date->dayOfWeekIso) {
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+            7 => 'Minggu',
+        };
+    }
+
+    private function buildSlots(User $dokter, Carbon $tanggal): array
+    {
+        $jamMulai = $dokter->jam_mulai ? substr((string) $dokter->jam_mulai, 0, 5) : '08:00';
+        $jamSelesai = $dokter->jam_selesai ? substr((string) $dokter->jam_selesai, 0, 5) : '16:00';
+
+        $cursor = Carbon::createFromFormat('Y-m-d H:i', $tanggal->format('Y-m-d') . ' ' . $jamMulai, 'Asia/Jakarta');
+        $end = Carbon::createFromFormat('Y-m-d H:i', $tanggal->format('Y-m-d') . ' ' . $jamSelesai, 'Asia/Jakarta');
+        $now = Carbon::now('Asia/Jakarta');
+        $slots = [];
+
+        while ($cursor->lt($end)) {
+            if (!$tanggal->isToday() || $cursor->gt($now)) {
+                $slots[] = $cursor->format('H:i');
+            }
+            $cursor->addMinutes(30);
+        }
+
+        return $slots;
     }
 }

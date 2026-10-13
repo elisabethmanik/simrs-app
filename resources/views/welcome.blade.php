@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -17,6 +18,28 @@
             }
         }
     </script>
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('simrs-theme');
+            if (savedTheme === 'light') document.documentElement.classList.add('light-mode');
+        })();
+
+        function togglePublicTheme() {
+            const html = document.documentElement;
+            const light = html.classList.toggle('light-mode');
+            localStorage.setItem('simrs-theme', light ? 'light' : 'dark');
+        }
+    </script>
+    <style>
+        html.light-mode body { background:#f8fafc !important; color:#0f172a !important; }
+        html.light-mode header { background:#ffffff !important; border-color:#d1fae5 !important; }
+        html.light-mode [class*="bg-slate-950"] { background-color:#f8fafc !important; }
+        html.light-mode [class*="bg-slate-900"] { background-color:#ffffff !important; }
+        html.light-mode [class*="text-white"] { color:#0f172a !important; }
+        html.light-mode [class*="text-slate-300"],
+        html.light-mode [class*="text-slate-400"] { color:#475569 !important; }
+        html.light-mode footer { background:#ecfdf5 !important; color:#0f172a !important; }
+    </style>
 </head>
 <body class="font-sans antialiased bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
 
@@ -126,7 +149,23 @@
                 <a href="#dokter" class="text-slate-300 hover:text-emerald-400 transition">Jadwal Dokter</a>
             </nav>
 
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="togglePublicTheme()"
+                        class="w-10 h-10 rounded-xl border border-emerald-800/70 bg-emerald-950/70 text-emerald-300 hover:bg-emerald-900 transition flex items-center justify-center"
+                        title="Dark mode / Light mode">
+                    ◐
+                </button>
+
+                @auth
+                    <a href="{{ route('dashboard') }}" class="border border-emerald-700 text-emerald-300 hover:text-white hover:bg-emerald-800 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition">
+                        Dashboard
+                    </a>
+                @else
+                    <a href="{{ route('login') }}" class="border border-emerald-700 text-emerald-300 hover:text-white hover:bg-emerald-800 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition">
+                        Login
+                    </a>
+                @endauth
+
                 <a href="{{ route('pendaftaran-online.index') }}" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-lg transition">
                     Buat Janji Temu
                 </a>

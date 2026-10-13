@@ -4,6 +4,13 @@ use Illuminate\Support\Facades\Route;
 use App\Models\User;
 use App\Http\Controllers\SpesialisController;
 use App\Http\Controllers\OnlinePendaftaranController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DokterDashboardController;
+use App\Http\Controllers\PasienController;
+use App\Http\Controllers\PendaftaranController;
+use App\Http\Controllers\RekamMedisController;
+use App\Http\Controllers\ApotekController;
+use App\Http\Controllers\ProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,17 +97,17 @@ Route::get('/', function () {
     return view('welcome', compact('listPoli', 'layanan'));
 })->name('home');
 
-// 2. Redirect Dashboard ke Beranda
-Route::get('/dashboard', function () {
-    return redirect()->route('home');
-})->name('dashboard');
-
 // 3. Detail Spesialis Poli
 Route::get('/spesialis/{slug}', [SpesialisController::class, 'show'])->name('spesialis.show');
 
 // 4. Form & Proses Pendaftaran Online Pasien
 Route::get('/pendaftaran-online', [OnlinePendaftaranController::class, 'index'])->name('pendaftaran-online.index');
 Route::post('/pendaftaran-online', [OnlinePendaftaranController::class, 'store'])->name('pendaftaran-online.store');
+Route::post('/pendaftaran-online/check-pasien', [OnlinePendaftaranController::class, 'checkPasien'])->name('pendaftaran-online.check-pasien');
+Route::get('/pendaftaran-online/status/{keyword}', [OnlinePendaftaranController::class, 'checkStatus'])->name('pendaftaran-online.check-status');
+Route::get('/pendaftaran-online/dokter/{poli}', [OnlinePendaftaranController::class, 'getDokterByPoli'])->name('pendaftaran-online.dokter');
+Route::get('/pendaftaran-online/sukses/{id}', [OnlinePendaftaranController::class, 'sukses'])->name('pendaftaran-online.sukses');
+Route::post('/pendaftaran-online/lihat-tiket', [OnlinePendaftaranController::class, 'lihatTiket'])->name('pendaftaran-online.lihat-tiket');
 
 // 5. Route Dinamis Layanan Penunjang
 Route::get('/layanan-penunjang/{slug}', function ($slug) {
@@ -164,17 +171,30 @@ Route::get('/layanan-penunjang/{slug}', function ($slug) {
     return view('layanan_penunjang.detail', compact('layanan', 'slug'));
 })->name('layanan-penunjang.detail');
 
-// 6. Route AJAX Fetch Dokter Sesuai Poli
-Route::get('/get-dokter/{poli}', function ($poli) {
-    $keyword = str_replace('Poli ', '', $poli);
+// 6. Area SIMRS Internal - wajib login
+Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dokter/dashboard', [DokterDashboardController::class, 'index'])->name('dokter.dashboard');
 
-    $dokters = User::where('role', 'dokter')
-        ->where(function ($query) use ($poli, $keyword) {
-            $query->where('poli', $poli)
-                  ->orWhere('poli', 'LIKE', '%' . $keyword . '%');
-        })
-        ->select('id', 'name')
-        ->get();
+    Route::resource('pasiens', PasienController::class)->except(['show']);
 
-    return response()->json($dokters);
+    Route::get('/pendaftarans', [PendaftaranController::class, 'index'])->name('pendaftarans.index');
+    Route::get('/pendaftarans/create', [PendaftaranController::class, 'create'])->name('pendaftarans.create');
+    Route::post('/pendaftarans', [PendaftaranController::class, 'store'])->name('pendaftarans.store');
+    Route::get('/get-dokter/{poli}', [PendaftaranController::class, 'getDokterByPoli'])->name('pendaftarans.dokter-by-poli');
+
+    Route::get('/rekam-medis', [RekamMedisController::class, 'index'])->name('rekam-medis.index');
+    Route::post('/rekam-medis/panggil/{pendaftaran_id}', [RekamMedisController::class, 'panggilPasien'])->name('rekam-medis.panggil');
+    Route::get('/rekam-medis/create/{pendaftaran_id}', [RekamMedisController::class, 'create'])->name('rekam-medis.create');
+    Route::post('/rekam-medis', [RekamMedisController::class, 'store'])->name('rekam-medis.store');
+
+    Route::get('/apotek', [ApotekController::class, 'index'])->name('apotek.index');
+    Route::post('/apotek/serahkan/{pendaftaran_id}', [ApotekController::class, 'serahkanObat'])->name('apotek.serahkan');
+    Route::get('/apotek/cetak/{id}', [ApotekController::class, 'cetak'])->name('apotek.cetak');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+require __DIR__.'/auth.php';

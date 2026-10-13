@@ -103,11 +103,14 @@ class DatabaseSeeder extends Seeder
 
         foreach ($dokters as $d) {
             User::create([
-                'name'     => $d['name'],
-                'email'    => $d['email'],
-                'password' => Hash::make('password'),
-                'role'     => 'dokter',
-                'poli'     => $d['poli'],
+                'name'          => $d['name'],
+                'email'         => $d['email'],
+                'password'      => Hash::make('password'),
+                'role'          => 'dokter',
+                'poli'          => $d['poli'],
+                'hari_praktik'  => 'Senin,Selasa,Rabu,Kamis,Jumat',
+                'jam_mulai'     => '08:00:00',
+                'jam_selesai'   => '16:00:00',
             ]);
         }
     }
