@@ -2,45 +2,50 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Pasien;
 use App\Models\Pendaftaran;
 use App\Models\RekamMedis;
-use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $today = now()->toDateString();
+        // Redirect otomatis jika yang login adalah Dokter
+        if (auth()->user()->role === 'dokter') {
+            return redirect()->route('dokter.dashboard');
+        }
 
-        // Count statistik
+        // Variabel statistik untuk Dashboard Admin
         $totalPasien = Pasien::count();
-        $antreanHariIni = Pendaftaran::whereDate('tanggal_daftar', $today)->count();
-        $menungguPemeriksaan = Pendaftaran::whereDate('tanggal_daftar', $today)->where('status', 'menunggu')->count();
-        $menungguObat = Pendaftaran::whereDate('tanggal_daftar', $today)->where('status', 'menunggu_obat')->count();
-        $layananSelesai = Pendaftaran::whereDate('tanggal_daftar', $today)->where('status', 'selesai')->count();
+        $menungguPemeriksaan = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
+            ->where('status', 'menunggu')
+            ->count();
+        $menungguApotek = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
+            ->whereIn('status', ['menunggu_apotek', 'menunggu_obat'])
+            ->count();
+        $pelayananSelesai = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
+            ->where('status', 'selesai')
+            ->count();
 
-        // Antrean Pendaftaran Terkini Hari Ini
-        $antreanTerbaru = Pendaftaran::with(['pasien', 'dokter'])
-            ->whereDate('tanggal_daftar', $today)
+        $antreanHariIni = Pendaftaran::with(['pasien', 'dokter'])
+            ->whereDate('tanggal_daftar', now()->toDateString())
             ->latest()
             ->take(5)
             ->get();
 
-        // Rekam Medis Terkini
-        $rekamMedisTerbaru = RekamMedis::with(['pasien', 'dokter'])
+        $pemeriksaanTerbaru = RekamMedis::with('pasien')
             ->latest()
             ->take(5)
             ->get();
 
         return view('dashboard', compact(
             'totalPasien',
-            'antreanHariIni',
             'menungguPemeriksaan',
-            'menungguObat',
-            'layananSelesai',
-            'antreanTerbaru',
-            'rekamMedisTerbaru'
+            'menungguApotek',
+            'pelayananSelesai',
+            'antreanHariIni',
+            'pemeriksaanTerbaru'
         ));
     }
 }

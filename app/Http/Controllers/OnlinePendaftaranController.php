@@ -56,7 +56,7 @@ class OnlinePendaftaranController extends Controller
     }
 
     /**
-     * API Cek Status Antrean / Booking (Aman dari Server Error / 404)
+     * API Cek Status Antrean / Booking via No. RM atau NIK
      */
     public function checkStatus($keyword)
     {
@@ -66,37 +66,42 @@ class OnlinePendaftaranController extends Controller
             if (empty($keyword)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Masukkan Kode Booking, No. RM, atau NIK terlebih dahulu.'
+                    'message' => 'Masukkan No. RM atau NIK terlebih dahulu.'
                 ], 200);
             }
 
-            // 1. Cari data pasien berdasarkan NIK atau Nomor RM
+            // 1. Cari data pasien berdasarkan NIK atau No. RM
             $pasien = Pasien::where('nik', $keyword)
                 ->orWhere('no_rm', $keyword)
                 ->first();
 
-            // 2. Cari data pendaftaran antrean
+            if (!$pasien) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data pasien dengan NIK / No. RM tersebut tidak ditemukan.'
+                ], 200);
+            }
+
+            // 2. Cari pendaftaran antrean paling baru milik pasien
             $pendaftaran = Pendaftaran::with(['pasien', 'dokter'])
-                ->where(function ($q) use ($keyword, $pasien) {
-                    $q->where('kode_booking', $keyword);
-                    if ($pasien) {
-                        $q->orWhere('pasien_id', $pasien->id);
-                    }
-                })
+                ->where('pasien_id', $pasien->id)
                 ->latest()
                 ->first();
 
             if (!$pendaftaran) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data pendaftaran / antrean tidak ditemukan.'
+                    'message' => 'Pasien ini belum memiliki pendaftaran / antrean aktif.'
                 ], 200);
             }
+
+            // Format otomatis kode booking menggunakan tanggal & nomor antrean
+            $kodeBookingFormat = 'REG-' . date('Ymd', strtotime($pendaftaran->tanggal_daftar)) . '-' . sprintf('%03d', $pendaftaran->no_antrean);
 
             return response()->json([
                 'success' => true,
                 'data'    => [
-                    'kode_booking'  => $pendaftaran->kode_booking ?? ('REG-' . $pendaftaran->id),
+                    'kode_booking'  => $pendaftaran->kode_booking ?? $kodeBookingFormat,
                     'nomor_antrean' => $pendaftaran->no_antrean,
                     'nama_pasien'   => $pendaftaran->pasien ? $pendaftaran->pasien->nama : '-',
                     'poli'          => $pendaftaran->poli,
@@ -109,7 +114,7 @@ class OnlinePendaftaranController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi masalah pada server: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ], 200);
         }
     }
@@ -157,7 +162,7 @@ class OnlinePendaftaranController extends Controller
     }
 
     /**
-     * Proses Simpan Pendaftaran Online Pasien (Auto-Increment Antrean Presisi & DB Transaction)
+     * Proses Simpan Pendaftaran Online Pasien (Auto-Increment Antrean Presisi)
      */
     public function store(Request $request)
     {
@@ -237,10 +242,8 @@ class OnlinePendaftaranController extends Controller
                     ->max('no_antrean');
 
                 $noAntrean = $lastAntrean ? $lastAntrean + 1 : 1;
-                $kodeBooking = 'REG-' . date('Ymd', strtotime($request->tanggal_daftar)) . '-' . sprintf('%03d', $noAntrean);
 
                 return Pendaftaran::create([
-                    'kode_booking'   => $kodeBooking,
                     'pasien_id'      => $pasien_id,
                     'poli'           => $request->poli,
                     'dokter_id'      => $selectedDokter->id,

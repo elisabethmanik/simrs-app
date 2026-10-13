@@ -12,24 +12,36 @@
 
                 <!-- Navigation Links (Desktop) -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
+                    <!-- Dashboard (Hak Akses: Admin) -->
+                    @if(auth()->user()->role === 'admin')
+                        <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                            {{ __('Dashboard') }}
+                        </x-nav-link>
 
-                    <!-- Menu Data Pasien -->
-                    <x-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
-                        {{ __('Data Pasien') }}
-                    </x-nav-link>
+                        <!-- Menu Data Pasien -->
+                        <x-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
+                            {{ __('Data Pasien') }}
+                        </x-nav-link>
 
-                    <!-- Menu Pendaftaran Poli -->
-                    <x-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
-                        {{ __('Pendaftaran Poli') }}
-                    </x-nav-link>
+                        <!-- Menu Pendaftaran Poli -->
+                        <x-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
+                            {{ __('Pendaftaran Poli') }}
+                        </x-nav-link>
+                    @endif
 
-                    <!-- Menu Pemeriksaan / RME -->
-                    <x-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
-                        {{ __('Pemeriksaan / RME') }}
-                    </x-nav-link>
+                    <!-- Menu Pemeriksaan / RME (Hak Akses: Admin & Dokter) -->
+                    @if(in_array(auth()->user()->role, ['admin', 'dokter']))
+                        <x-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
+                            {{ __('Pemeriksaan / RME') }}
+                        </x-nav-link>
+                    @endif
+
+                    <!-- Menu Apotek / Resep (Hak Akses: Admin, Apoteker, Farmasi) -->
+                    @if(in_array(auth()->user()->role, ['admin', 'apoteker', 'farmasi']))
+                        <x-nav-link :href="route('apotek.index')" :active="request()->routeIs('apotek.*')">
+                            {{ __('Apotek / Resep') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -87,28 +99,34 @@
     <!-- Responsive Navigation Menu (Layar Mobile/HP) -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
+            <!-- Dashboard, Data Pasien, Pendaftaran (Mobile: Hak Akses Admin) -->
+            @if(auth()->user()->role === 'admin')
+                <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    {{ __('Dashboard') }}
+                </x-responsive-nav-link>
 
-            <!-- Menu Data Pasien -->
-            <x-responsive-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
-                {{ __('Data Pasien') }}
-            </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
+                    {{ __('Data Pasien') }}
+                </x-responsive-nav-link>
 
-            <!-- Menu Pendaftaran Poli -->
-            <x-responsive-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
-                {{ __('Pendaftaran Poli') }}
-            </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
+                    {{ __('Pendaftaran Poli') }}
+                </x-responsive-nav-link>
+            @endif
 
-            <!-- Menu Pemeriksaan / RME -->
-            <x-responsive-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
-                {{ __('Pemeriksaan / RME') }}
-            </x-responsive-nav-link>
+            <!-- Menu Pemeriksaan / RME (Mobile: Hak Akses Admin & Dokter) -->
+            @if(in_array(auth()->user()->role, ['admin', 'dokter']))
+                <x-responsive-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
+                    {{ __('Pemeriksaan / RME') }}
+                </x-responsive-nav-link>
+            @endif
 
-            <x-nav-link :href="route('apotek.index')" :active="request()->routeIs('apotek.*')">
-                {{ __('Apotek / Resep') }}
-            </x-nav-link>
+            <!-- Menu Apotek / Resep (Mobile: Hak Akses Admin, Apoteker, Farmasi) -->
+            @if(in_array(auth()->user()->role, ['admin', 'apoteker', 'farmasi']))
+                <x-responsive-nav-link :href="route('apotek.index')" :active="request()->routeIs('apotek.*')">
+                    {{ __('Apotek / Resep') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

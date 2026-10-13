@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Tampilkan Halaman Form Login
      */
     public function create(): View
     {
@@ -20,7 +20,7 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Proses Autentikasi Login & Redirect Berdasarkan Role
      */
     public function store(LoginRequest $request): RedirectResponse
     {
@@ -28,11 +28,23 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = Auth::user();
+
+        // Redirect otomatis berdasarkan Role
+        if ($user->role === 'dokter') {
+            return redirect()->intended(route('dokter.dashboard'));
+        } 
+        
+        if (in_array($user->role, ['apoteker', 'farmasi'])) {
+            return redirect()->intended(route('apotek.index'));
+        }
+
+        // Default untuk Admin / Petugas Loket
+        return redirect()->intended(route('dashboard'));
     }
 
     /**
-     * Destroy an authenticated session.
+     * Proses Logout
      */
     public function destroy(Request $request): RedirectResponse
     {
