@@ -16,20 +16,31 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    <!-- Menu Data Pasien -->
-                    <x-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
-                        {{ __('Data Pasien') }}
-                    </x-nav-link>
+                    @if(Auth::user()->role === 'admin')
+                        <!-- Menu Data Pasien -->
+                        <x-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
+                            {{ __('Data Pasien') }}
+                        </x-nav-link>
 
-                    <!-- Menu Pendaftaran Poli -->
-                    <x-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
-                        {{ __('Pendaftaran Poli') }}
-                    </x-nav-link>
+                        <!-- Menu Pendaftaran Poli -->
+                        <x-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
+                            {{ __('Pendaftaran Poli') }}
+                        </x-nav-link>
+                    @endif
 
-                    <!-- Menu Pemeriksaan / RME -->
-                    <x-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
-                        {{ __('Pemeriksaan / RME') }}
-                    </x-nav-link>
+                    @if(in_array(Auth::user()->role, ['admin', 'dokter']))
+                        <!-- Menu Pemeriksaan / RME -->
+                        <x-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
+                            {{ __('Pemeriksaan / RME') }}
+                        </x-nav-link>
+                    @endif
+
+                    @if(in_array(Auth::user()->role, ['admin', 'apoteker']))
+                        <!-- Menu Farmasi / Apotek -->
+                        <x-nav-link :href="route('apotek.index')" :active="request()->routeIs('apotek.*')">
+                            {{ __('Apotek / Resep') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -91,24 +102,31 @@
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
 
-            <!-- Menu Data Pasien -->
-            <x-responsive-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
-                {{ __('Data Pasien') }}
-            </x-responsive-nav-link>
+            @if(Auth::user()->role === 'admin')
+                <!-- Menu Data Pasien -->
+                <x-responsive-nav-link :href="route('pasiens.index')" :active="request()->routeIs('pasiens.*')">
+                    {{ __('Data Pasien') }}
+                </x-responsive-nav-link>
 
-            <!-- Menu Pendaftaran Poli -->
-            <x-responsive-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
-                {{ __('Pendaftaran Poli') }}
-            </x-responsive-nav-link>
+                <!-- Menu Pendaftaran Poli -->
+                <x-responsive-nav-link :href="route('pendaftarans.index')" :active="request()->routeIs('pendaftarans.*')">
+                    {{ __('Pendaftaran Poli') }}
+                </x-responsive-nav-link>
+            @endif
 
-            <!-- Menu Pemeriksaan / RME -->
-            <x-responsive-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
-                {{ __('Pemeriksaan / RME') }}
-            </x-responsive-nav-link>
+            @if(in_array(Auth::user()->role, ['admin', 'dokter']))
+                <!-- Menu Pemeriksaan / RME -->
+                <x-responsive-nav-link :href="route('rekam-medis.index')" :active="request()->routeIs('rekam-medis.*')">
+                    {{ __('Pemeriksaan / RME') }}
+                </x-responsive-nav-link>
+            @endif
 
-            <x-nav-link :href="route('apotek.index')" :active="request()->routeIs('apotek.*')">
-                {{ __('Apotek / Resep') }}
-            </x-nav-link>
+            @if(in_array(Auth::user()->role, ['admin', 'apoteker']))
+                <!-- Menu Farmasi / Apotek -->
+                <x-responsive-nav-link :href="route('apotek.index')" :active="request()->routeIs('apotek.*')">
+                    {{ __('Apotek / Resep') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

@@ -6,80 +6,53 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
-class UserSeeder extends Seeder
+class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // Admin
-        User::create([
-            'name'     => 'Admin SIMRS',
-            'email'    => 'admin@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'admin',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin@simrs.com'],
+            [
+                'name' => 'Admin SIMRS',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+                'poli' => null,
+            ]
+        );
 
-        // --- POLI UMUM ---
-        User::create([
-            'name'     => 'dr. Andi Pratama',
-            'email'    => 'andi@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Umum',
-        ]);
-        User::create([
-            'name'     => 'dr. Sarah Wijaya',
-            'email'    => 'sarah@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Umum',
-        ]);
+        $dokters = [
+            ['name' => 'dr. Andi Pratama', 'email' => 'andi@simrs.com', 'poli' => 'Poli Umum'],
+            ['name' => 'dr. Sarah Wijaya', 'email' => 'sarah@simrs.com', 'poli' => 'Poli Umum'],
+            ['name' => 'drg. Rian Hidayat', 'email' => 'rian@simrs.com', 'poli' => 'Poli Gigi'],
+            ['name' => 'drg. Siti Nurhaliza', 'email' => 'siti@simrs.com', 'poli' => 'Poli Gigi'],
+            ['name' => 'dr. Budi Santoso, Sp.A', 'email' => 'budi@simrs.com', 'poli' => 'Poli Anak'],
+            ['name' => 'dr. Maya Indah, Sp.A', 'email' => 'maya@simrs.com', 'poli' => 'Poli Anak'],
+            ['name' => 'dr. Hendra Kusuma, Sp.PD', 'email' => 'hendra@simrs.com', 'poli' => 'Poli Penyakit Dalam'],
+            ['name' => 'dr. Nina Lestari, Sp.PD', 'email' => 'nina@simrs.com', 'poli' => 'Poli Penyakit Dalam'],
+        ];
 
-        // --- POLI GIGI ---
-        User::create([
-            'name'     => 'drg. Rian Hidayat',
-            'email'    => 'rian@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Gigi',
-        ]);
-        User::create([
-            'name'     => 'drg. Siti Nurhaliza',
-            'email'    => 'siti@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Gigi',
-        ]);
+        foreach ($dokters as $dokter) {
+            User::updateOrCreate(
+                ['email' => $dokter['email']],
+                [
+                    'name' => $dokter['name'],
+                    'password' => Hash::make('password'),
+                    'role' => 'dokter',
+                    'poli' => $dokter['poli'],
+                ]
+            );
+        }
 
-        // --- POLI ANAK ---
-        User::create([
-            'name'     => 'dr. Budi Santoso, Sp.A',
-            'email'    => 'budi@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Anak',
-        ]);
-        User::create([
-            'name'     => 'dr. Maya Indah, Sp.A',
-            'email'    => 'maya@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Anak',
-        ]);
-
-        // --- POLI PENYAKIT DALAM ---
-        User::create([
-            'name'     => 'dr. Hendra Kusuma, Sp.PD',
-            'email'    => 'hendra@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Penyakit Dalam',
-        ]);
-        User::create([
-            'name'     => 'dr. Nina Lestari, Sp.PD',
-            'email'    => 'nina@simrs.com',
-            'password' => Hash::make('password'),
-            'role'     => 'dokter',
-            'poli'     => 'Poli Penyakit Dalam',
-        ]);
+        // Aktor Farmasi / Apoteker
+        User::updateOrCreate(
+            ['email' => 'farmasi@simrs.com'],
+            [
+                'name' => 'Petugas Farmasi',
+                'password' => Hash::make('password'),
+                'role' => 'apoteker',
+                'poli' => null,
+            ]
+        );
     }
-} 
+}

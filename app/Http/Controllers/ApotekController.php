@@ -4,16 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\RekamMedis;
 use App\Models\Pendaftaran;
-use Illuminate\Http\Request;
 
 class ApotekController extends Controller
 {
-    // Menampilkan daftar resep obat hari ini
+    // Menampilkan resep digital hari ini untuk aktor farmasi/apoteker.
     public function index()
     {
         $reseps = RekamMedis::with(['pasien', 'dokter', 'pendaftaran'])
+            ->whereNotNull('resep_obat')
             ->whereHas('pendaftaran', function ($query) {
-                $query->whereDate('tanggal_daftar', now()->toDateString());
+                $query->whereDate('tanggal_daftar', now()->toDateString())
+                    ->whereIn('status', ['menunggu_obat', 'selesai']);
             })
             ->latest()
             ->get();
@@ -21,16 +22,22 @@ class ApotekController extends Controller
         return view('apotek.index', compact('reseps'));
     }
 
-    // Konfirmasi penyerahan obat ke pasien
+    // Konfirmasi penyerahan obat ke pasien.
     public function serahkanObat($pendaftaran_id)
     {
         $pendaftaran = Pendaftaran::findOrFail($pendaftaran_id);
+
+        if ($pendaftaran->status !== 'menunggu_obat') {
+            return redirect()->route('apotek.index')
+                ->with('error', 'Resep ini sudah tidak berada pada antrean farmasi.');
+        }
+
         $pendaftaran->update(['status' => 'selesai']);
 
         return redirect()->route('apotek.index')->with('success', 'Obat berhasil diserahkan ke pasien!');
     }
 
-    // Cetak Struk / Nota Resep
+    // Cetak resep / nota resep yang sudah dibuat dokter.
     public function cetak($id)
     {
         $rekamMedis = RekamMedis::with(['pasien', 'dokter', 'pendaftaran'])->findOrFail($id);
