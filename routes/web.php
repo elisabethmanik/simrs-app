@@ -1,9 +1,19 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Http\Controllers\SpesialisController;
 use App\Http\Controllers\OnlinePendaftaranController;
+use App\Http\Controllers\PasienDashboardController;
+use App\Http\Controllers\Auth\PatientRegisteredController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PasienController;
+use App\Http\Controllers\PendaftaranController;
+use App\Http\Controllers\RekamMedisController;
+use App\Http\Controllers\ApotekController;
+use App\Http\Controllers\LayananPenunjangController;
+use App\Http\Controllers\ProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,91 +100,76 @@ Route::get('/', function () {
     return view('welcome', compact('listPoli', 'layanan'));
 })->name('home');
 
-// 2. Redirect Dashboard ke Beranda
-Route::get('/dashboard', function () {
-    return redirect()->route('home');
-})->name('dashboard');
-
-// 3. Detail Spesialis Poli
+// 2. Detail Spesialis Poli & Layanan Penunjang Publik
 Route::get('/spesialis/{slug}', [SpesialisController::class, 'show'])->name('spesialis.show');
+Route::get('/layanan-penunjang/{slug}', [LayananPenunjangController::class, 'detail'])->name('layanan-penunjang.detail');
 
-// 4. Form & Proses Pendaftaran Online Pasien
+// 3. Form & Proses Pendaftaran Online Pasien (Publik)
 Route::get('/pendaftaran-online', [OnlinePendaftaranController::class, 'index'])->name('pendaftaran-online.index');
 Route::post('/pendaftaran-online', [OnlinePendaftaranController::class, 'store'])->name('pendaftaran-online.store');
 
-// 5. Route Dinamis Layanan Penunjang
-Route::get('/layanan-penunjang/{slug}', function ($slug) {
-    $layananList = [
-        'rawat-jalan' => [
-            'judul' => 'Rawat Jalan',
-            'icon' => '🩺',
-            'deskripsi' => 'Layanan perawatan medis tanpa memerlukan rawat inap. Pasien dapat melakukan konsultasi, pemeriksaan, diagnosis, dan tindakan medis dalam satu hari dengan cepat dan efisien.',
-            'fasilitas' => ['Poliklinik Eksekutif', 'Poliklinik Umum', 'Jakarta Pain Clinic', 'Jakarta Brain Centre', 'Beauty & Health Clinic']
-        ],
-        'rawat-inap' => [
-            'judul' => 'Rawat Inap',
-            'icon' => '🛏️',
-            'deskripsi' => 'Layanan pemulihan dan perawatan intensif bagi pasien yang membutuhkan pengawasan medis 24 jam oleh tim dokter dan perawat profesional.',
-            'fasilitas' => ['Kamar VVIP & VIP', 'Kamar Kelas 1, 2, & 3', 'Ruang Isolasi Tekanan Negatif', 'Unit Perawatan Intensif (ICU/ICCU)', 'Layanan Keperawatan 24 Jam']
-        ],
-        'medical-check-up' => [
-            'judul' => 'Medical Check Up (MCU)',
-            'icon' => '👨‍⚕️',
-            'deskripsi' => 'Layanan pemeriksaan kesehatan menyeluruh secara berkala untuk mendeteksi dini potensi penyakit serta menjaga kualitas hidup optimal.',
-            'fasilitas' => ['Paket MCU Basic & Executive', 'Pemeriksaan Jantung & Paru', 'Skrining Laboratorium Lengkap', 'Pemeriksaan Mata & THT', 'Konsultasi Dokter Spesialis']
-        ],
-        'hemodialisa' => [
-            'judul' => 'Hemodialisa (Cuci Darah)',
-            'icon' => '🩸',
-            'deskripsi' => 'Unit terapi cuci darah bagi penderita gagal ginjal dengan peralatan modern serta sistem pemurnian air (Reverse Osmosis) berstandar tinggi.',
-            'fasilitas' => ['Mesin Dialisis Terkini', 'Ruang Perawatan Nyaman & Steril', 'Pengawasan Dokter Spesialis Ginjal (KGH)', 'Layanan Snack & Edukasi Nutrisi']
-        ],
-        'laboratorium' => [
-            'judul' => 'Laboratorium Klinik',
-            'icon' => '🧪',
-            'deskripsi' => 'Layanan pemeriksaan spesimen darah, urin, dan jaringan tubuh dengan peralatan otomatis canggih untuk hasil diagnostik yang akurat dan cepat.',
-            'fasilitas' => ['Hematologi & Kimia Darah', 'Pemeriksaan Imunologi & Serologi', 'Mikrobiologi & Parasitologi', 'Layanan Drive-Thru / Sameday Result']
-        ],
-        'kamar-operasi' => [
-            'judul' => 'Kamar Operasi (OK)',
-            'icon' => '✂️',
-            'deskripsi' => 'Fasilitas tindakan bedah minor hingga mayor yang dilengkapi sistem ventilasi Laminar Air Flow dan sterilisasi tingkat tinggi.',
-            'fasilitas' => ['Bedah Laparoskopi (Minimal Invasif)', 'Ruang Pulih Sadar (PACU)', 'Peralatan Anestesi Canggih', 'Tim Bedah & Anestesi Standby 24 Jam']
-        ],
-        'fisioterapi' => [
-            'judul' => 'Fisioterapi & Rehabilitasi Medis',
-            'icon' => '🏃',
-            'deskripsi' => 'Layanan pemulihan fungsi tubuh pasca cedera, stroke, atau operasi melalui terapi fisik, manipulasi otot, dan latihan terpandu.',
-            'fasilitas' => ['Electrotherapy & Ultrasound', 'Terapi Inframerah & Diatermi', 'Gym Rehabilitasi Medis', 'Terapi Stroke & Cedera Olahraga']
-        ],
-        'radiologi' => [
-            'judul' => 'Radiologi & Diagnostic Imaging',
-            'icon' => '☢️',
-            'deskripsi' => 'Pemeriksaan pencitraan medis canggih untuk membantu dokter melihat kondisi organ dalam tubuh secara detail dan presisi.',
-            'fasilitas' => ['Digital X-Ray', 'CT-Scan Multi Slice', 'USG 3D/4D Color Doppler', 'Panoramic & Cephalometric Dental']
-        ],
-    ];
+// 4. Registrasi & Login Publik Khusus Pasien
+Route::get('/register-pasien', [PatientRegisteredController::class, 'create'])->name('register.pasien');
+Route::post('/register-pasien', [PatientRegisteredController::class, 'store'])->name('register.pasien.store');
+Route::get('/portal-pasien/login', function () {
+    return view('auth.login-pasien');
+})->name('login.pasien');
 
-    if (!array_key_exists($slug, $layananList)) {
-        return redirect()->route('home');
-    }
+// ==========================================
+// ROUTE INTERNAL / PETUGAS (BUTUH LOGIN)
+// ==========================================
+Route::middleware(['auth', 'verified'])->group(function () {
+    
+    // Dashboard Utama Staf/Admin/Dokter
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    $layanan = $layananList[$slug];
+    // Profile Management
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    return view('layanan_penunjang.detail', compact('layanan', 'slug'));
-})->name('layanan-penunjang.detail');
+    // ADMIN: Data Pasien & Pendaftaran Poli
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('pasiens', PasienController::class);
+        Route::resource('pendaftarans', PendaftaranController::class);
 
-// 6. Route AJAX Fetch Dokter Sesuai Poli
-Route::get('/get-dokter/{poli}', function ($poli) {
-    $keyword = str_replace('Poli ', '', $poli);
+        // Helper seeding data dokter
+        Route::get('/fix-dokter-sekarang', function () {
+            User::where('role', 'dokter')->delete();
 
-    $dokters = User::where('role', 'dokter')
-        ->where(function ($query) use ($poli, $keyword) {
-            $query->where('poli', $poli)
-                  ->orWhere('poli', 'LIKE', '%' . $keyword . '%');
-        })
-        ->select('id', 'name')
-        ->get();
+            User::create(['name' => 'dr. Andi Pratama, Sp.PD', 'email' => 'andi@simrs.com', 'password' => Hash::make('password'), 'role' => 'dokter', 'poli' => 'Poli Penyakit Dalam']);
+            User::create(['name' => 'dr. Sarah Wijaya, Sp.PD', 'email' => 'sarah@simrs.com', 'password' => Hash::make('password'), 'role' => 'dokter', 'poli' => 'Poli Penyakit Dalam']);
+            User::create(['name' => 'dr. Budi Santoso, Sp.A', 'email' => 'budi@simrs.com', 'password' => Hash::make('password'), 'role' => 'dokter', 'poli' => 'Poli Anak']);
+            User::create(['name' => 'dr. Rian Hidayat, Sp.KG', 'email' => 'rian@simrs.com', 'password' => Hash::make('password'), 'role' => 'dokter', 'poli' => 'Poli Gigi']);
+            User::create(['name' => 'drg. Maya Indah', 'email' => 'maya@simrs.com', 'password' => Hash::make('password'), 'role' => 'dokter', 'poli' => 'Poli Gigi']);
+            User::create(['name' => 'dr. Siti Rahma', 'email' => 'siti@simrs.com', 'password' => Hash::make('password'), 'role' => 'dokter', 'poli' => 'Poli Umum']);
+            User::create(['name' => 'dr. Hendra Kusuma', 'email' => 'hendra@simrs.com', 'password' => Hash::make('password'), 'role' => 'dokter', 'poli' => 'Poli Umum']);
 
-    return response()->json($dokters);
+            return 'BERHASIL! Data Dokter Sudah Masuk ke Database.';
+        });
+    });
+
+    // DOKTER: Pemeriksaan, RME, Diagnosa, Tindakan, Resep Digital
+    Route::middleware('role:admin,dokter')->group(function () {
+        Route::get('/rekam-medis', [RekamMedisController::class, 'index'])->name('rekam-medis.index');
+        Route::get('/rekam-medis/periksa/{pendaftaran_id}', [RekamMedisController::class, 'create'])->name('rekam-medis.create');
+        Route::post('/rekam-medis', [RekamMedisController::class, 'store'])->name('rekam-medis.store');
+    });
+
+    // FARMASI / APOTEKER: Menerima Resep & Penyerahan Obat
+    Route::middleware('role:admin,apoteker')->group(function () {
+        Route::get('/apotek', [ApotekController::class, 'index'])->name('apotek.index');
+        Route::post('/apotek/serahkan/{pendaftaran_id}', [ApotekController::class, 'serahkanObat'])->name('apotek.serahkan');
+        Route::get('/apotek/cetak/{id}', [ApotekController::class, 'cetak'])->name('apotek.cetak');
+    });
 });
+
+// ==========================================
+// ROUTE KHUSUS PASIEN (AUTH)
+// ==========================================
+Route::middleware(['auth'])->group(function () {
+    Route::get('/pasien/dashboard', [App\Http\Controllers\PasienDashboardController::class, 'index'])->name('pasien.dashboard');
+});
+
+// Include rute autentikasi bawaan Laravel Breeze
+require __DIR__.'/auth.php';

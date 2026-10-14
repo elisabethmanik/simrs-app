@@ -2,6 +2,13 @@
     <form method="POST" action="{{ route('register') }}">
         @csrf
 
+        <!-- Input NIK -->
+<div class="mt-4">
+    <x-input-label for="nik" :value="__('NIK (Nomor Induk Kependudukan)')" />
+    <x-text-input id="nik" class="block mt-1 w-full" type="text" name="nik" :value="old('nik')" required maxlength="16" />
+    <x-input-error :messages="$errors->get('nik')" class="mt-2" />
+</div>
+
         <!-- Name -->
         <div>
             <x-input-label for="name" :value="__('Name')" />

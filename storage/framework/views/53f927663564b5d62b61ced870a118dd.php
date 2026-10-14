@@ -278,6 +278,17 @@
                             </button>
                         </div>
 
+                        <!-- Input Tambahan untuk Akun Login Pasien Baru -->
+<div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700">Email untuk Akun Login</label>
+    <input type="email" name="email" value="<?php echo e(old('email')); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" required placeholder="pasien@email.com">
+</div>
+
+<div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700">Password Akun</label>
+    <input type="password" name="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" required placeholder="Minimal 6 karakter">
+</div>
+
                     </form>
                 </div>
 

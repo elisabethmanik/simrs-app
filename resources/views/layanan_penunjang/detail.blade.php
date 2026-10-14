@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $layanan['judul'] }} - RS Cipta Medika</title>
+    <title>{{ $layanan['judul'] ?? $namaLayanan ?? 'Layanan Penunjang' }} - RS Cipta Medika</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {

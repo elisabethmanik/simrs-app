@@ -3,49 +3,51 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Pasien;
 use App\Models\Pendaftaran;
+use App\Models\Pasien;
 use App\Models\RekamMedis;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // Redirect otomatis jika yang login adalah Dokter
-        if (auth()->user()->role === 'dokter') {
-            return redirect()->route('dokter.dashboard');
+        $user = Auth::user();
+
+        // Jika user adalah pasien, arahkan atau ambil data khusus pasien
+        if ($user->role === 'pasien') {
+            // Ambil antrean aktif pasien yang sedang login
+            $antreanAktif = Pendaftaran::where('pasien_id', $user->id) // atau sesuaikan relasi pasien kamu
+                ->whereIn('status', ['menunggu', 'diproses'])
+                ->latest()
+                ->first();
+
+            // Ambil riwayat kunjungan pasien
+            $riwayatKunjungan = Pendaftaran::where('pasien_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return view('dashboard-pasien', compact('antreanAktif', 'riwayatKunjungan'));
         }
 
-        // Variabel statistik untuk Dashboard Admin
+        // Jika user adalah Admin / Petugas / Dokter, tampilkan statistik dashboard umum
+        $antreanHariIni = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())->count();
         $totalPasien = Pasien::count();
-        $menungguPemeriksaan = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
-            ->where('status', 'menunggu')
-            ->count();
-        $menungguApotek = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
-            ->whereIn('status', ['menunggu_apotek', 'menunggu_obat'])
-            ->count();
-        $pelayananSelesai = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())
-            ->where('status', 'selesai')
-            ->count();
-
-        $antreanHariIni = Pendaftaran::with(['pasien', 'dokter'])
+        $pasienSelesai = Pendaftaran::whereDate('tanggal_daftar', now()->toDateString())->where('status', 'selesai')->count();
+        
+        $pendaftarans = Pendaftaran::with(['pasien', 'dokter'])
             ->whereDate('tanggal_daftar', now()->toDateString())
-            ->latest()
-            ->take(5)
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        $pemeriksaanTerbaru = RekamMedis::with('pasien')
-            ->latest()
-            ->take(5)
-            ->get();
+        $rekamMedis = RekamMedis::latest()->take(5)->get();
 
         return view('dashboard', compact(
-            'totalPasien',
-            'menungguPemeriksaan',
-            'menungguApotek',
-            'pelayananSelesai',
-            'antreanHariIni',
-            'pemeriksaanTerbaru'
+            'antreanHariIni', 
+            'totalPasien', 
+            'pasienSelesai', 
+            'pendaftarans', 
+            'rekamMedis'
         ));
     }
 }

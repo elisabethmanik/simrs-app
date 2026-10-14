@@ -8,6 +8,8 @@ use App\Models\Pendaftaran;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Exception;
 
 class OnlinePendaftaranController extends Controller
@@ -162,7 +164,7 @@ class OnlinePendaftaranController extends Controller
     }
 
     /**
-     * Proses Simpan Pendaftaran Online Pasien (Auto-Increment Antrean Presisi)
+     * Proses Simpan Pendaftaran Online Pasien (Auto-Increment Antrean Presisi + Auto Login Akun Pasien)
      */
     public function store(Request $request)
     {
@@ -170,6 +172,8 @@ class OnlinePendaftaranController extends Controller
             $request->validate([
                 'nama'          => 'required|string|max:255',
                 'nik'           => 'required|numeric|digits:16|unique:pasiens,nik',
+                'email'         => 'nullable|email|unique:users,email', // Validasi email untuk akun login
+                'password'      => 'nullable|min:6',                 // Validasi password untuk akun login
                 'jenis_kelamin' => 'required|in:L,P',
                 'tanggal_lahir' => 'required|date',
                 'no_hp'         => 'required|numeric|digits_between:10,13',
@@ -177,6 +181,7 @@ class OnlinePendaftaranController extends Controller
             ], [
                 'nik.unique'           => 'NIK ini sudah terdaftar sebagai pasien lama. Silakan gunakan tab Pasien Lama.',
                 'nik.digits'           => 'NIK harus berisi tepat 16 digit angka.',
+                'email.unique'         => 'Email ini sudah terdaftar di sistem.',
                 'no_hp.digits_between' => 'Nomor HP/WA harus berkisar antara 10 sampai 13 digit angka.'
             ]);
         } else {
@@ -212,8 +217,33 @@ class OnlinePendaftaranController extends Controller
                     ]);
 
                     $pasien_id = $pasien->id;
+
+                    // Buatkan Akun Login untuk Pasien Baru jika email & password diisi
+                    if ($request->filled('email') && $request->filled('password')) {
+                        $user = User::create([
+                            'nik'      => trim($request->nik),
+                            'name'     => trim($request->nama),
+                            'email'    => trim($request->email),
+                            'password' => Hash::make($request->password),
+                            'role'     => 'pasien',
+                        ]);
+                        // Hubungkan pendaftaran ke user_id jika tabel pendaftarans memiliki kolom user_id
+                        // $pendaftaran->user_id = $user->id; (bisa disesuaikan jika kolomnya ada)
+                        
+                        // Auto login pasien
+                        Auth::login($user);
+                    }
                 } else {
                     $pasien_id = $request->pasien_id;
+                    $pasien = Pasien::find($pasien_id);
+
+                    // Jika pasien lama sudah punya akun user berdasarkan NIK, otomatis login-kan
+                    if ($pasien && $pasien->nik) {
+                        $existingUser = User::where('nik', $pasien->nik)->first();
+                        if ($existingUser) {
+                            Auth::login($existingUser);
+                        }
+                    }
                 }
 
                 $cleanPoli = trim(str_ireplace('poli', '', strtolower($request->poli)));
@@ -253,6 +283,12 @@ class OnlinePendaftaranController extends Controller
                     'status'         => 'menunggu',
                 ]);
             });
+
+            // Jika pasien sudah login (punya akun), arahkan ke dashboard pasien. Jika tidak, arahkan ke halaman sukses tiket.
+            if (Auth::check() && Auth::user()->role === 'pasien') {
+                return redirect()->route('pasien.dashboard')
+                    ->with('success', 'Pendaftaran online berhasil! Nomor antrean Anda: ' . $pendaftaran->no_antrean);
+            }
 
             return redirect()->route('pendaftaran-online.sukses', $pendaftaran->id)
                 ->with('success', 'Pendaftaran online berhasil dibuat!');

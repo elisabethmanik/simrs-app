@@ -38,6 +38,9 @@ class AuthenticatedSessionController extends Controller
         if (in_array($user->role, ['apoteker', 'farmasi'])) {
             return redirect()->intended(route('apotek.index'));
         }
+        if ($user->role === 'pasien') {
+        return redirect()->intended(route('pasien.dashboard'));
+    }
 
         // Default untuk Admin / Petugas Loket
         return redirect()->intended(route('dashboard'));

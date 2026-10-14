@@ -126,11 +126,19 @@
                 <a href="#dokter" class="text-slate-300 hover:text-emerald-400 transition">Jadwal Dokter</a>
             </nav>
 
-            <div class="flex items-center space-x-4">
-                <a href="<?php echo e(route('pendaftaran-online.index')); ?>" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-lg transition">
-                    Buat Janji Temu
-                </a>
-            </div>
+<!-- GANTI TOMBOL LAMA DENGAN INI -->
+<div class="flex items-center gap-3">
+    <!-- Portal Pasien (Arahkan ke route login.pasien) -->
+    <a href="<?php echo e(route('login.pasien')); ?>" class="inline-flex items-center gap-2 text-emerald-300 hover:text-white text-sm font-semibold px-4 py-2 transition">
+        <span>Portal Pasien</span>
+    </a>
+
+    <!-- Portal Staf Medis (Baru mengarah ke route login staf) -->
+    <a href="<?php echo e(route('login')); ?>" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-full transition shadow-md text-sm">
+        <span>Portal Staf Medis</span>
+    </a>
+</div>
+</div>
 
         </div>
     </header>
@@ -198,6 +206,120 @@
 
         </div>
     </section>
+    <!-- ================= SECTION: TENTANG KAMI ================= -->
+<section id="tentang" class="py-20 bg-slate-900 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            <!-- Kolom Teks Deskripsi -->
+            <div class="space-y-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-950/80 border border-emerald-800/60 text-emerald-400 text-xs font-bold rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    Tentang RS Cipta Medika
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                    Memberikan Perawatan Medis <span class="text-emerald-400">Terbaik & Profesional</span>
+                </h2>
+                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                    RS Cipta Medika hadir dengan fasilitas medis modern berstandar internasional, didukung oleh tim dokter spesialis berpengalaman, perawat siaga, serta sistem pelayanan digital terpadu untuk memastikan kenyamanan dan kesehatan Anda sekeluarga.
+                </p>
+
+                <!-- Poin Keunggulan -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-start gap-3">
+                        <div class="p-2 bg-emerald-950 text-emerald-400 rounded-xl mt-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bold text-sm">Dokter Spesialis</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Praktik setiap hari dengan jadwal fleksibel.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-start gap-3">
+                        <div class="p-2 bg-emerald-950 text-emerald-400 rounded-xl mt-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bold text-sm">IGD 24 Jam</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Siaga darurat dengan ambulans cepat.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kolom Visual Kotak Statistik / Info -->
+            <div class="bg-slate-950 p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden space-y-6">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <h3 class="text-xl font-bold text-white border-b border-slate-800 pb-4">Komitmen Pelayanan Kesehatan</h3>
+                <ul class="space-y-4 text-sm text-slate-300">
+                    <li class="flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Pelayanan ramah berorientasi pada keselamatan pasien.
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Teknologi rekam medis dan antrean berbasis online real-time.
+                    </li>
+                    <li class="flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Fasilitas penunjang farmasi dan laboratorium lengkap.
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ================= SECTION: TIMELINE ALUR LAYANAN BERJALAN ================= -->
+<section class="py-20 bg-slate-950 border-t border-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-2xl mx-auto mb-16 space-y-3">
+            <span class="text-emerald-400 text-xs font-bold uppercase tracking-widest px-3 py-1 bg-emerald-950/80 border border-emerald-800/60 rounded-full">Alur Pemeriksaan</span>
+            <h2 class="text-3xl font-extrabold text-white">Bagaimana Cara Berobat di RS Cipta Medika?</h2>
+            <p class="text-xs text-slate-400">Ikuti 4 langkah mudah pendaftaran online hingga penanganan medis selesai.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
+            <!-- Step 1 -->
+            <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 text-center space-y-4 relative group hover:border-emerald-500/50 transition">
+                <div class="w-14 h-14 bg-emerald-950 text-emerald-400 border border-emerald-800/60 rounded-2xl flex items-center justify-center font-black text-xl mx-auto shadow-lg group-hover:scale-110 transition">
+                    01
+                </div>
+                <h3 class="text-base font-bold text-white">Buat Akun / Login</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Daftar atau masuk ke portal pasien menggunakan NIK dan email aktif Anda.</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 text-center space-y-4 relative group hover:border-emerald-500/50 transition">
+                <div class="w-14 h-14 bg-emerald-950 text-emerald-400 border border-emerald-800/60 rounded-2xl flex items-center justify-center font-black text-xl mx-auto shadow-lg group-hover:scale-110 transition">
+                    02
+                </div>
+                <h3 class="text-base font-bold text-white">Pilih Poli & Dokter</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Tentukan poliklinik tujuan dan jadwal dokter spesialis yang diinginkan.</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 text-center space-y-4 relative group hover:border-emerald-500/50 transition">
+                <div class="w-14 h-14 bg-emerald-950 text-emerald-400 border border-emerald-800/60 rounded-2xl flex items-center justify-center font-black text-xl mx-auto shadow-lg group-hover:scale-110 transition">
+                    03
+                </div>
+                <h3 class="text-base font-bold text-white">Dapatkan Struk Antrean</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Nomor antrean dan kode booking otomatis terbit di dashboard portal Anda.</p>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 text-center space-y-4 relative group hover:border-emerald-500/50 transition">
+                <div class="w-14 h-14 bg-emerald-950 text-emerald-400 border border-emerald-800/60 rounded-2xl flex items-center justify-center font-black text-xl mx-auto shadow-lg group-hover:scale-110 transition">
+                    04
+                </div>
+                <h3 class="text-base font-bold text-white">Pemeriksaan & Obat</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Datang ke rumah sakit sesuai jadwal, lakukan pemeriksaan, lalu ambil obat.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
     <!-- SECTION LAYANAN PENUNJANG MEDIS (IKON UNIK PER KARTU) -->
     <section id="fasilitas" class="py-16 px-6 max-w-7xl mx-auto space-y-10">

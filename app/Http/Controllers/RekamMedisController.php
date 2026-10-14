@@ -10,25 +10,19 @@ use Exception;
 
 class RekamMedisController extends Controller
 {
-    /**
-     * Menampilkan daftar antrean pemeriksaan & riwayat rekam medis
-     */
+    // Menampilkan antrean pemeriksaan dan riwayat rekam medis.
+    // Dokter hanya melihat pasien dan riwayat yang menjadi tanggung jawabnya.
     public function index()
     {
         $user = auth()->user();
 
-        // 1. Ambil antrean pemeriksaan hari ini (dinamis berdasarkan role)
         $antreans = Pendaftaran::with(['pasien', 'dokter'])
             ->whereDate('tanggal_daftar', now()->toDateString())
             ->whereIn('status', ['menunggu', 'diperiksa'])
             ->when($user->role === 'dokter', function ($query) use ($user) {
-                // Saring antrean khusus untuk dokter yang sedang login
-                $query->where(function ($q) use ($user) {
-                    $q->where('dokter_id', $user->id)
-                      ->orWhere('poli', 'LIKE', '%' . str_ireplace('poli', '', $user->poli) . '%');
-                });
+                $query->where('dokter_id', $user->id);
             })
-            ->orderBy('no_antrean', 'asc')
+            ->orderBy('id', 'asc')
             ->get();
 
         // 2. Ambil riwayat rekam medis terbaru
@@ -43,45 +37,28 @@ class RekamMedisController extends Controller
         return view('rekam_medis.index', compact('antreans', 'historyMedis'));
     }
 
-    /**
-     * Panggil / ACC Pasien Selanjutnya untuk Diperiksa
-     */
-    public function panggilPasien($pendaftaran_id)
-    {
-        try {
-            $pendaftaran = Pendaftaran::findOrFail($pendaftaran_id);
-            
-            // Ubah status antrean menjadi 'diperiksa'
-            $pendaftaran->update([
-                'status' => 'diperiksa'
-            ]);
-
-            return redirect()->route('rekam-medis.create', $pendaftaran->id)
-                ->with('success', 'Pasien ' . ($pendaftaran->pasien->nama ?? '') . ' berhasil dipanggil!');
-                
-        } catch (Exception $e) {
-            return back()->with('error', 'Gagal memanggil pasien: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Form input rekam medis untuk pasien tertentu
-     */
+    // Form input rekam medis untuk pasien tertentu.
     public function create($pendaftaran_id)
     {
+        $user = auth()->user();
+
         $pendaftaran = Pendaftaran::with(['pasien', 'dokter'])->findOrFail($pendaftaran_id);
 
-        // Otomatis ubah status pendaftaran menjadi 'diperiksa' saat form dibuka
-        if ($pendaftaran->status === 'menunggu') {
-            $pendaftaran->update(['status' => 'diperiksa']);
+        if ($user->role === 'dokter' && (int) $pendaftaran->dokter_id !== (int) $user->id) {
+            abort(403, 'Pasien ini bukan antrean dokter yang sedang login.');
         }
+
+        if (! in_array($pendaftaran->status, ['menunggu', 'diperiksa'], true)) {
+            return redirect()->route('rekam-medis.index')
+                ->with('error', 'Pasien ini sudah tidak berada pada tahap pemeriksaan dokter.');
+        }
+
+        $pendaftaran->update(['status' => 'diperiksa']);
 
         return view('rekam_medis.create', compact('pendaftaran'));
     }
 
-    /**
-     * Simpan data rekam medis & alihkan status ke Apotek
-     */
+    // Simpan data rekam medis dan kirim resep digital ke antrean farmasi.
     public function store(Request $request)
     {
         $request->validate([
@@ -96,43 +73,31 @@ class RekamMedisController extends Controller
             'resep_obat'     => 'nullable|string',
         ]);
 
-        try {
-            DB::transaction(function () use ($request) {
-                // 1. Simpan Data Rekam Medis
-                RekamMedis::create([
-                    'pendaftaran_id' => $request->pendaftaran_id,
-                    'pasien_id'      => $request->pasien_id,
-                    'dokter_id'      => $request->dokter_id,
-                    'keluhan_utama'  => trim($request->keluhan_utama),
-                    'tensi_darah'    => $request->tensi_darah,
-                    'suhu_tubuh'     => $request->suhu_tubuh,
-                    'diagnosa'       => trim($request->diagnosa),
-                    'tindakan'       => $request->tindakan,
-                    'resep_obat'     => $request->resep_obat,
-                ]);
+        $user = auth()->user();
+        $pendaftaran = Pendaftaran::findOrFail($request->pendaftaran_id);
 
-                // 2. Tentukan status selanjutnya: jika ada resep maka masuk ke apotek, jika tidak langsung 'selesai'
-                $statusBaru = !empty($request->resep_obat) ? 'menunggu_apotek' : 'selesai';
-
-                Pendaftaran::where('id', $request->pendaftaran_id)->update([
-                    'status' => $statusBaru
-                ]);
-            });
-
-            return redirect()->route('rekam-medis.index')
-                ->with('success', 'Pemeriksaan medis berhasil disimpan dan pasien dirujuk ke Apotek!');
-
-        } catch (Exception $e) {
-            return back()->with('error', 'Gagal menyimpan rekam medis: ' . $e->getMessage())->withInput();
+        if ($user->role === 'dokter' && (int) $pendaftaran->dokter_id !== (int) $user->id) {
+            abort(403, 'Anda tidak dapat menyimpan pemeriksaan untuk pasien dokter lain.');
         }
-    }
 
-    /**
-     * Detail Rekam Medis Pasien
-     */
-    public function show($id)
-    {
-        $rekamMedis = RekamMedis::with(['pasien', 'dokter', 'pendaftaran'])->findOrFail($id);
-        return view('rekam_medis.show', compact('rekamMedis'));
+        $dokterId = $user->role === 'dokter' ? $user->id : $request->dokter_id;
+
+        RekamMedis::create([
+            'pendaftaran_id' => $request->pendaftaran_id,
+            'pasien_id'      => $request->pasien_id,
+            'dokter_id'      => $dokterId,
+            'keluhan_utama'  => $request->keluhan_utama,
+            'tensi_darah'    => $request->tensi_darah,
+            'suhu_tubuh'     => $request->suhu_tubuh,
+            'diagnosa'       => $request->diagnosa,
+            'tindakan'       => $request->tindakan,
+            'resep_obat'     => $request->resep_obat,
+        ]);
+
+        // Sesuai alur dokter -> farmasi: setelah pemeriksaan, resep masuk antrean apotek.
+        $pendaftaran->update(['status' => 'menunggu_obat']);
+
+        return redirect()->route('rekam-medis.index')
+            ->with('success', 'Pemeriksaan medis berhasil disimpan dan dirujuk ke Apotek!');
     }
 }
