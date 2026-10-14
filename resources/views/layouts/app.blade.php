@@ -5,22 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'SIMRS Cipta Medika') }}</title>
+    <title>{{ config('app.name', 'SIMRS Cipta Medika Duby') }}</title>
 
     <script>
         (function () {
             const savedTheme = localStorage.getItem('simrs-theme');
-            if (savedTheme === 'dark') {
-                document.documentElement.classList.add('dark');
-            }
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
         })();
+
+        function updateSimrsThemeButton() {
+            const isDark = document.documentElement.classList.contains('dark');
+            document.querySelectorAll('[data-theme-icon]').forEach((icon) => {
+                icon.textContent = isDark ? '☀' : '☾';
+            });
+        }
 
         function toggleSimrsTheme() {
             const html = document.documentElement;
             const isDark = html.classList.toggle('dark');
             localStorage.setItem('simrs-theme', isDark ? 'dark' : 'light');
-            window.dispatchEvent(new CustomEvent('simrs-theme-changed', { detail: { isDark } }));
+            updateSimrsThemeButton();
         }
+
+        document.addEventListener('DOMContentLoaded', updateSimrsThemeButton);
     </script>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -29,6 +36,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
+        html.dark { color-scheme: dark; }
         html.dark body,
         html.dark .simrs-root,
         html.dark .min-h-screen.bg-gray-100 {

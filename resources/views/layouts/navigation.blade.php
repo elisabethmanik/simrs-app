@@ -52,13 +52,6 @@
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
-                <button type="button"
-                        onclick="toggleSimrsTheme()"
-                        class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition"
-                        title="Dark mode / Light mode">
-                    <span class="text-lg">◐</span>
-                </button>
-
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
@@ -91,12 +84,21 @@
                         </form>
                     </x-slot>
                 </x-dropdown>
+
+                <button type="button"
+                        onclick="toggleSimrsTheme()"
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition"
+                        title="Dark mode / Light mode"
+                        aria-label="Ganti mode tampilan">
+                    <span data-theme-icon class="text-lg">☾</span>
+                </button>
             </div>
 
             <div class="-me-2 flex items-center gap-2 sm:hidden">
                 <button type="button" onclick="toggleSimrsTheme()"
-                        class="inline-flex items-center justify-center w-10 h-10 rounded-md text-gray-500 hover:bg-gray-100">
-                    ◐
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-md text-gray-500 hover:bg-gray-100"
+                        aria-label="Ganti mode tampilan">
+                    <span data-theme-icon>☾</span>
                 </button>
 
                 <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none transition duration-150 ease-in-out">

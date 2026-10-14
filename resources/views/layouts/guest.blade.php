@@ -5,20 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'SIMRS Cipta Medika') }}</title>
+    <title>{{ config('app.name', 'SIMRS Cipta Medika Duby') }}</title>
 
     <script>
         (function () {
-            if (localStorage.getItem('simrs-theme') === 'dark') {
-                document.documentElement.classList.add('dark');
-            }
+            const savedTheme = localStorage.getItem('simrs-theme');
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
         })();
+
+        function updateSimrsThemeButton() {
+            const isDark = document.documentElement.classList.contains('dark');
+            document.querySelectorAll('[data-theme-icon]').forEach((icon) => {
+                icon.textContent = isDark ? '☀' : '☾';
+            });
+        }
 
         function toggleSimrsTheme() {
             const html = document.documentElement;
             const isDark = html.classList.toggle('dark');
             localStorage.setItem('simrs-theme', isDark ? 'dark' : 'light');
+            updateSimrsThemeButton();
         }
+
+        document.addEventListener('DOMContentLoaded', updateSimrsThemeButton);
     </script>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -27,6 +36,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
+        html.dark { color-scheme: dark; }
         html.dark body { background:#0f172a !important; color:#e5e7eb !important; }
         html.dark .bg-gray-100 { background:#0f172a !important; }
         html.dark .bg-white { background:#111827 !important; }
@@ -44,7 +54,7 @@
     <button type="button" onclick="toggleSimrsTheme()"
             class="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-white border border-gray-200 shadow flex items-center justify-center text-gray-700"
             title="Ganti mode terang / gelap">
-        <span class="text-lg">◐</span>
+        <span data-theme-icon class="text-lg">☾</span>
     </button>
 
     <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
